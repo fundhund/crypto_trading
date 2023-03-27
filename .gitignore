@@ -1,0 +1,7 @@
+# Folder for testing new functions
+playground/
+
+# API keys
+keys
+
+*.pyc
