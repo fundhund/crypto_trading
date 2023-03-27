@@ -73,7 +73,7 @@ class MarketObserver:
         return currency_symbol in list(map(lambda x:x["symbol"], self.candidates))
 
 
-    def update_candidate_trends(self, new_candidates = []):
+    def update_price_trends(self, new_candidates = []):
         for candidate in new_candidates:
             candidate_symbol = candidate["symbol"]
             if candidate_symbol in self.price_trends:
@@ -107,5 +107,9 @@ class MarketObserver:
         
         candidates.sort(key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True)
         
-        self.update_candidate_trends(candidates)
         self.candidates = candidates
+
+    
+    def update(self, per_page=250, pages=4):
+        self.update_candidates(per_page, pages)
+        self.update_price_trends(self.candidates)
