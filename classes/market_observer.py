@@ -69,12 +69,11 @@ class MarketObserver:
     
         change_1h = currency_data["change_1h"]
         change_24h = currency_data["change_24h"]
-        change_7d = currency_data["change_7d"]
 
-        if change_1h is None or change_24h is None or change_7d is None:
+        if change_1h is None or change_24h is None:
             return False
 
-        has_positive_trend = change_1h > 0 and change_24h >= change_1h and change_7d >= change_24h
+        has_positive_trend = change_1h > 0.5 and change_24h >= change_1h
         is_available_on_kraken = currency_data["symbol"].upper() in available_on_kraken
 
         return has_positive_trend and is_available_on_kraken
