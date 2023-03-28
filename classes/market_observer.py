@@ -22,9 +22,6 @@ def filter_keys(currency_data):
     return new_currency_data
 
 
-
-
-
 class MarketObserver:
     def __init__(self):
         self._candidates = []
