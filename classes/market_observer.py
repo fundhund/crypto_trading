@@ -79,19 +79,21 @@ class MarketObserver:
         return has_positive_trend and is_available_on_kraken
 
 
-    def is_falling_fast(self, currency):
-        if not currency in self.price_trends:
-            return True
+    def is_currently_stable(self, currency_data):
+        currency_symbol = currency_data["symbol"]
+
+        if not currency_symbol in self.price_trends:
+            return False
         
-        price_trend = self.price_trends[currency]
+        price_trend = self.price_trends[currency_symbol]
 
         if len(price_trend) >= 15 and price_trend[-1] < price_trend[0]:
-            return True
+            return False
         
         if len(price_trend) >= 5 and price_trend[-1] <= (price_trend[-5] * 0.99):
-            return True
+            return False
         
-        return False
+        return True
 
 
     def is_in_candidates(self, currency_symbol):
@@ -130,12 +132,10 @@ class MarketObserver:
                 new_candidates += list(filter(self.is_candidate, map(filter_keys, response_json)))
             response.close()
         
-        # candidates.sort(key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True)
-
-        current = next(currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency)
+        current = next((currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency), None)
         
         self.update_price_trends(new_candidates)
-        self.candidates = list(filter(self.is_falling_fast, new_candidates))
+        self.candidates = list(filter(self.is_currently_stable, new_candidates))
         
         top = list(sorted(self.candidates, key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))[0] if self.candidates else None
 
