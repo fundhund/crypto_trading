@@ -135,9 +135,9 @@ class MarketObserver:
         current = next((currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency), None)
         
         self.update_price_trends(new_candidates)
-        self.candidates = list(filter(self.is_currently_stable, new_candidates))
+        self.candidates = list(sorted(filter(self.is_currently_stable, new_candidates), key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))
         
-        top = list(sorted(self.candidates, key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))[0] if self.candidates else None
+        top = self.candidates[0] if self.candidates else None
 
         return {
             "current_currency_data": current,
