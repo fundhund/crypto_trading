@@ -1,4 +1,5 @@
 from classes.market_observer import MarketObserver
+from classes.kraken_account import KrakenAccount
 import time
 from datetime import datetime
 import pprint
@@ -9,6 +10,7 @@ def get_timestamp():
     return formatted_time
 
 market_observer = MarketObserver()
+kraken_account = KrakenAccount()
 
 while True:
     print(get_timestamp())

@@ -1,3 +1,10 @@
+kraken_symbols = {
+    "btc": "xbt",
+}
+
+def to_kraken_symbol(symbol):
+    return kraken_symbols.get(symbol, symbol).upper()
+
 class KrakenAccount:
     def __init__(self):
         # Create API header, secret and stuff
@@ -9,8 +16,8 @@ class KrakenAccount:
 
     # todo
     def buy(self, currency_symbol, amount_in_eur):
-        print(f"Buying {currency_symbol} for {amount_in_eur} EUR...")
+        print(f"Buying {to_kraken_symbol(currency_symbol)} for {amount_in_eur} EUR...")
 
     # todo
     def sell_all(self, currency_symbol):
-        print(f"Selling all our {currency_symbol}...")
+        print(f"Selling all our {to_kraken_symbol(currency_symbol)}...")
