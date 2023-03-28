@@ -22,25 +22,26 @@ def filter_keys(currency_data):
     return new_currency_data
 
 
-def is_candidate(currency_data):
-    
-    change_1h = currency_data["change_1h"]
-    change_24h = currency_data["change_24h"]
-    change_7d = currency_data["change_7d"]
 
-    if change_1h is None or change_24h is None or change_7d is None:
-        return False
-
-    has_positive_trend = change_1h > 0 and change_24h >= change_1h and change_7d >= change_24h
-    is_available_on_kraken = currency_data["symbol"].upper() in available_on_kraken
-
-    return has_positive_trend and is_available_on_kraken
 
 
 class MarketObserver:
     def __init__(self):
         self._candidates = []
         self._price_trends = {}
+        self._current_currency = None
+
+
+    @property
+    def current_currency(self):
+        """Get current candidates."""
+        return self._current_currency
+
+
+    @current_currency.setter
+    def current_currency(self, value):
+        self._current_currency = value
+
 
     @property
     def candidates(self):
@@ -48,10 +49,38 @@ class MarketObserver:
         return self._candidates
 
 
+    @candidates.setter
+    def candidates(self, value):
+        self._candidates = value
+
+
     @property
     def price_trends(self):
         """Get current price trends."""
         return self._price_trends
+    
+
+    @price_trends.setter
+    def price_trends(self, value):
+        self._price_trends = value
+
+
+    def is_candidate(self, currency_data):
+
+        if currency_data["symbol"] == self.current_currency:
+            return True
+    
+        change_1h = currency_data["change_1h"]
+        change_24h = currency_data["change_24h"]
+        change_7d = currency_data["change_7d"]
+
+        if change_1h is None or change_24h is None or change_7d is None:
+            return False
+
+        has_positive_trend = change_1h > 0 and change_24h >= change_1h and change_7d >= change_24h
+        is_available_on_kraken = currency_data["symbol"].upper() in available_on_kraken
+
+        return has_positive_trend and is_available_on_kraken
 
 
     def is_falling_fast(self, currency):
@@ -91,25 +120,30 @@ class MarketObserver:
             self.price_trends.pop(candidate_symbol)
 
 
-    def update_candidates(self, per_page=250, pages=4):
-        candidates = []
+    def update(self, per_page=250, pages=4):
+        new_candidates = []
         
         for page in range(1, pages + 1):
             api_url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&order=market_cap_desc&per_page={per_page}&page={page}&sparkline=false&price_change_percentage=1h%2C24h%2C7d&randInt={str(int(time.time()*1000))}"
             response = requests.get(api_url, headers={"Cache-Control": "no-cache"})
             if not response.ok:
                 print(f"Error: Request failed with status code {response.status_code}. Keeping last known candidates.")
-                return
+                return {}
             response_json = response.json()
             if isinstance(response_json, list):
-                candidates += list(filter(is_candidate, map(filter_keys, response_json)))
+                new_candidates += list(filter(self.is_candidate, map(filter_keys, response_json)))
             response.close()
         
-        candidates.sort(key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True)
-        
-        self.candidates = candidates
+        # candidates.sort(key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True)
 
-    
-    def update(self, per_page=250, pages=4):
-        self.update_candidates(per_page, pages)
-        self.update_price_trends(self.candidates)
+        current = next(currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency)
+        
+        self.update_price_trends(new_candidates)
+        self.candidates = list(filter(self.is_falling_fast, new_candidates))
+        
+        top = list(sorted(self.candidates, key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))[0] if self.candidates else None
+
+        return {
+            "current_currency_data": current,
+            "top_currency_data": top,
+        }
