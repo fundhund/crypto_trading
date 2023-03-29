@@ -4,6 +4,18 @@ import time
 from datetime import datetime
 import pprint
 
+
+last_purchase_time = None
+is_first_iteration = True
+estimated_fee_share = 0.005
+update_interval = 60
+swap_cooldown = 180
+min_diff_for_swap = 1
+
+market_observer = MarketObserver()
+kraken_account = KrakenAccount()
+
+
 def get_timestamp():
     current_time = datetime.now()
     formatted_time = current_time.strftime("%H:%M:%S")
@@ -28,12 +40,39 @@ def print_candidates(candidates):
             print(pos, name, symbol, c_1h, c_24h, c_7d)
     print("\n")
 
-market_observer = MarketObserver()
-kraken_account = KrakenAccount()
 
-last_purchase_time = None
+def buy(currency_symbol, share_of_balance=1):
+    print(f"Buying {currency_symbol.upper()} for {str(share_of_balance * 100)} % of available EUR...")
+    global last_purchase_time
+    eur_balance = kraken_account.get_eur_balance()
+    if eur_balance is not None and eur_balance > 0:
+        available_funds = eur_balance * share_of_balance * (1 - estimated_fee_share)
+        kraken_account.buy(currency_symbol, available_funds)
+        market_observer.update_current_currency(top_currency_data)
+        last_purchase_time = datetime.now()
 
-is_first_iteration = True
+
+def sell_all(currency_symbol):
+    print(f"Selling all {currency_symbol.upper()} for EUR...")
+    kraken_account.sell_all(currency_symbol)
+    if market_observer.current_currency["symbol"] == currency_symbol:
+        market_observer.update_current_currency({
+            "symbol": None,
+            "purchase_price": None,
+        })
+
+
+def swap_currencies(old, new):
+    print(f"Swapping {old.upper()} for {new.upper()}...")
+    buy(new)
+    sell_all(old)
+
+
+def is_swap_cooldown_over():
+    if last_purchase_time is None:
+        return True
+    return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
+
 
 while True:
     if is_first_iteration:
@@ -41,7 +80,9 @@ while True:
     else:
         time.sleep(60)
 
+    print("------------------------------")
     print(get_timestamp())
+    print("------------------------------")
 
     current_currency_symbol = market_observer.current_currency["symbol"]
     current_currency_data, top_currency_data = market_observer.update()
@@ -51,26 +92,43 @@ while True:
     # pprint.pprint(current_currency_data)
     # pprint.pprint(top_currency_data)
 
-    # if current_currency_symbol is None:
+    if current_currency_symbol is None:
+        print(f"No coin in portfolio yet...")
 
-    #     if top_currency_data is not None:
+        # If no crypto in prtfoio, use 50 % of EUR balance (minus estimated transaction fee) to buy best coin.
+        if top_currency_data is not None:
+            buy(top_currency_data["symbol"], 0.5)
+            continue
 
-    #         # Use 50 % of EUR balance (minus estimated transaction fee) to buy best coin
+        # If no crypto in portfolio and no candidates, do nothing.
+        else:
+            print("...and no candidates. Nothing to do.")
+            continue
 
-    #         eur_balance = kraken_account.get_eur_balance()
-    #         if eur_balance is not None and eur_balance > 0:
-    #             available_funds = eur_balance * 0.5 * 0.995
-    #             kraken_account.buy(top_currency_data["symbol"], available_funds)
-    #             market_observer.update_current_currency(top_currency_data)
-    #             last_purchase_time = datetime.now()
-    #             print(market_observer.current_currency)
+    else:
 
-    #     else:
-    #         continue
+        # If current coin gets surpassed by more than min_diff_for_swap %, swap.
+        if (
+            top_currency_data is not None
+            and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
+            and is_swap_cooldown_over()
+        ):
+            print(f"{current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %).")
+            swap_currencies(current_currency_symbol, top_currency_data["symbol"])
+            continue
 
+        
+        elif current_currency_data["change_1h"] <= 0:
+            print(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
+            if top_currency_data is not None:
+                print(f"{top_currency_data['symbol'].upper()} looks better.")
+                swap_currencies(current_currency_data, top_currency_data["symbol"])
+                continue
+            else:
+                print("Nothing else to buy right now...")
+                sell_all(current_currency_symbol)
+                continue
 
-    # pprint.pprint(market_observer.update())
-    # pprint.pprint(market_observer.candidates)
-    # pprint.pprint(market_observer.price_trends)
-    print("---")
-
+        else:
+            print(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
+            continue

@@ -2,11 +2,25 @@ import requests
 import json
 import time
 
+
 with open("kraken_currencies.json", "r") as f:
     available_on_kraken = json.load(f)
 
 with open("keys/coinmarketcap", "r") as f:
     api_key = f.readline()
+
+
+parameters = {
+    'start':'1',
+    'limit':'200',
+    'convert':'EUR'
+}
+
+headers = {
+    'Accepts': 'application/json',
+    'X-CMC_PRO_API_KEY': api_key,
+    "Cache-Control": "no-cache",
+}
 
 def filter_keys(currency_data):
     new_currency_data = {}
@@ -23,19 +37,6 @@ def filter_keys(currency_data):
     except:
         print("Error: ", currency_data)
     return new_currency_data
-
-
-parameters = {
-    'start':'1',
-    'limit':'200',
-    'convert':'EUR'
-}
-
-headers = {
-    'Accepts': 'application/json',
-    'X-CMC_PRO_API_KEY': api_key,
-    "Cache-Control": "no-cache",
-}
 
 
 class MarketObserver:
@@ -112,10 +113,7 @@ class MarketObserver:
         
         price_trend = self.price_trends[currency_symbol]
 
-        if len(price_trend) >= 10 and price_trend[-1] < price_trend[0]:
-            return False
-        
-        if len(price_trend) >= 5 and price_trend[-1] <= (price_trend[-5] * 0.99):
+        if len(price_trend) >= 2 and price_trend[-1] < price_trend[-2]:
             return False
         
         return True
@@ -130,8 +128,8 @@ class MarketObserver:
             candidate_symbol = candidate["symbol"]
             if candidate_symbol in self.price_trends:
                 self.price_trends[candidate_symbol].append(candidate["price"])
-                if len(self.price_trends[candidate_symbol]) >= 10:
-                    self.price_trends[candidate_symbol] = self.price_trends[candidate_symbol][-10:]
+                if len(self.price_trends[candidate_symbol]) >= 6:
+                    self.price_trends[candidate_symbol] = self.price_trends[candidate_symbol][-6:]
             else:
                 self.price_trends[candidate_symbol] = [candidate["price"]]
         

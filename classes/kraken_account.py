@@ -17,7 +17,6 @@ class KrakenAccount:
 
     # todo
     def get_eur_balance(self):
-        print("get_eur_balance")
         return 250
 
     # todo
