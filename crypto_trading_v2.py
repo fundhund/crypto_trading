@@ -1,4 +1,4 @@
-from classes.market_observer import MarketObserver
+from classes.market_observer_coinmarketcap import MarketObserver
 from classes.kraken_account import KrakenAccount
 import time
 from datetime import datetime
