@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import pprint
 
 
 with open("kraken_currencies.json", "r") as f:
@@ -12,7 +13,7 @@ with open("keys/coinmarketcap", "r") as f:
 
 parameters = {
     'start':'1',
-    'limit':'200',
+    'limit':'400',
     'convert':'EUR'
 }
 
@@ -81,7 +82,7 @@ class MarketObserver:
     def price_trends(self):
         """Get current price trends."""
         return self._price_trends
-    
+
 
     @price_trends.setter
     def price_trends(self, value):
@@ -89,7 +90,6 @@ class MarketObserver:
 
 
     def is_candidate(self, currency_data):
-
         if currency_data["symbol"] == self.current_currency["symbol"]:
             return True
     
@@ -164,6 +164,7 @@ class MarketObserver:
         current_currency_data = next((currency_data for currency_data in new_candidates if currency_data["symbol"] == self.current_currency["symbol"]), None)
         
         self.update_price_trends(new_candidates)
+        pprint.pprint(self.price_trends)
         self.candidates = list(sorted(filter(self.is_currently_stable, new_candidates), key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))
         
         top_currency_data = self.candidates[0] if self.candidates else None

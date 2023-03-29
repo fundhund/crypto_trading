@@ -42,7 +42,7 @@ def print_candidates(candidates):
 
 
 def buy(currency_symbol, share_of_balance=1):
-    print(f"Buying {currency_symbol.upper()} for {str(share_of_balance * 100)} % of available EUR...")
+    log(f"Buying {currency_symbol.upper()} for {str(share_of_balance * 100)} % of available EUR...")
     global last_purchase_time
     eur_balance = kraken_account.get_eur_balance()
     if eur_balance is not None and eur_balance > 0:
@@ -53,7 +53,7 @@ def buy(currency_symbol, share_of_balance=1):
 
 
 def sell_all(currency_symbol):
-    print(f"Selling all {currency_symbol.upper()} for EUR...")
+    log(f"Selling all {currency_symbol.upper()} for EUR...")
     kraken_account.sell_all(currency_symbol)
     if market_observer.current_currency["symbol"] == currency_symbol:
         market_observer.update_current_currency({
@@ -63,7 +63,7 @@ def sell_all(currency_symbol):
 
 
 def swap_currencies(old, new):
-    print(f"Swapping {old.upper()} for {new.upper()}...")
+    log(f"Swapping {old.upper()} for {new.upper()}...")
     buy(new)
     sell_all(old)
 
@@ -73,6 +73,11 @@ def is_swap_cooldown_over():
         return True
     return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
 
+def log(text):
+    filename = "logs/" + datetime.today().strftime('%Y-%m-%d')
+    with open(filename, "a") as f:
+        f.write(text + "\n")
+    print(text)
 
 while True:
     if is_first_iteration:
@@ -80,9 +85,7 @@ while True:
     else:
         time.sleep(60)
 
-    print("------------------------------")
-    print(get_timestamp())
-    print("------------------------------")
+    log(f"------------------------------\n{get_timestamp()}\n------------------------------")
 
     current_currency_symbol = market_observer.current_currency["symbol"]
     current_currency_data, top_currency_data = market_observer.update()
@@ -93,7 +96,7 @@ while True:
     # pprint.pprint(top_currency_data)
 
     if current_currency_symbol is None:
-        print(f"No coin in portfolio yet...")
+        log(f"No coin in portfolio yet...")
 
         # If no crypto in prtfoio, use 50 % of EUR balance (minus estimated transaction fee) to buy best coin.
         if top_currency_data is not None:
@@ -113,22 +116,22 @@ while True:
             and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
             and is_swap_cooldown_over()
         ):
-            print(f"{current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %).")
+            log(f"{current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %).")
             swap_currencies(current_currency_symbol, top_currency_data["symbol"])
             continue
 
         
         elif current_currency_data["change_1h"] <= 0:
-            print(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
+            log(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
             if top_currency_data is not None:
-                print(f"{top_currency_data['symbol'].upper()} looks better.")
+                log(f"{top_currency_data['symbol'].upper()} looks better.")
                 swap_currencies(current_currency_data, top_currency_data["symbol"])
                 continue
             else:
-                print("Nothing else to buy right now...")
+                log("Nothing else to buy right now...")
                 sell_all(current_currency_symbol)
                 continue
 
         else:
-            print(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
+            log(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
             continue
