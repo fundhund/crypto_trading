@@ -42,6 +42,12 @@ class MarketObserver:
     def current_currency(self, value):
         self._current_currency = value
 
+    def update_current_currency(self, currency_data):
+        self.current_currency = {
+            "symbol": currency_data["symbol"],
+            "purchase_price": currency_data["price"],
+        }
+
 
     @property
     def candidates(self):
@@ -131,23 +137,18 @@ class MarketObserver:
             response = requests.get(api_url, headers={"Cache-Control": "no-cache"})
             if not response.ok:
                 print(f"Error: Request failed with status code {response.status_code}. Keeping last known candidates.")
-                return {
-                    "current_currency_data": None,
-                    "top_currency_data": None,
-                }
+                response.close()
+                return (None, None)
             response_json = response.json()
             if isinstance(response_json, list):
                 new_candidates += list(filter(self.is_candidate, map(filter_keys, response_json)))
             response.close()
         
-        current = next((currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency["symbol"]), None)
+        current_currency_data = next((currency_data for currency_data in self.candidates if currency_data["symbol"] == self.current_currency["symbol"]), None)
         
         self.update_price_trends(new_candidates)
         self.candidates = list(sorted(filter(self.is_currently_stable, new_candidates), key=lambda x:x["change_1h"] if x["change_1h"] else 0, reverse=True))
         
-        top = self.candidates[0] if self.candidates else None
+        top_currency_data = self.candidates[0] if self.candidates else None
 
-        return {
-            "current_currency_data": current,
-            "top_currency_data": top,
-        }
+        return (current_currency_data, top_currency_data)

@@ -1,9 +1,14 @@
-kraken_symbols = {
+to_kraken_symbols = {
     "btc": "xbt",
 }
 
+from_kraken_symbols = {v: k for k, v in to_kraken_symbols.items()}
+
 def to_kraken_symbol(symbol):
-    return kraken_symbols.get(symbol, symbol).upper()
+    return to_kraken_symbols.get(symbol, symbol).upper()
+
+def from_kraken_symbol(symbol):
+    return from_kraken_symbols.get(symbol.lower(), symbol)
 
 class KrakenAccount:
     def __init__(self):
@@ -11,8 +16,9 @@ class KrakenAccount:
         pass
 
     # todo
-    def get_portfolio(self):
-        print("get_portfolio")
+    def get_eur_balance(self):
+        print("get_eur_balance")
+        return 250
 
     # todo
     def buy(self, currency_symbol, amount_in_eur):
