@@ -37,11 +37,11 @@ def print_candidates(candidates):
 
 
 def buy(currency_symbol, share_of_balance=1):
-    log(f"Buying {currency_symbol.upper()} for {str(share_of_balance * 100)} % of available EUR...")
     global last_purchase_time
     eur_balance = kraken_account.get_eur_balance()
     if eur_balance is not None and eur_balance > 0:
-        available_funds = eur_balance * share_of_balance * (1 - estimated_fee_share)
+        available_funds = round(eur_balance * share_of_balance * (1 - estimated_fee_share), 2)
+        log(f"Buying {currency_symbol.upper()} for {str(available_funds)} EUR...")
         kraken_account.buy(currency_symbol, available_funds)
         market_observer.update_current_currency(top_currency_data)
         last_purchase_time = datetime.now()

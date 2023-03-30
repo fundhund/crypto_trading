@@ -7,7 +7,7 @@ import pprint
 with open("kraken_currencies.json", "r") as f:
     available_on_kraken = json.load(f)
 
-with open("keys/coinmarketcap", "r") as f:
+with open("keys/coinmarketcap.txt", "r") as f:
     api_key = f.readline()
 
 
