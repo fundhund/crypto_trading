@@ -1,5 +1,6 @@
 from classes.market_observer_coinmarketcap import MarketObserver
 from classes.kraken_account import KrakenAccount
+from classes.log_helper import log, get_timestamp
 import time
 from datetime import datetime
 import pprint
@@ -14,12 +15,6 @@ min_diff_for_swap = 1
 
 market_observer = MarketObserver()
 kraken_account = KrakenAccount()
-
-
-def get_timestamp():
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S")
-    return formatted_time
 
 
 def print_candidates(candidates):
@@ -73,17 +68,12 @@ def is_swap_cooldown_over():
         return True
     return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
 
-def log(text):
-    filename = "logs/" + datetime.today().strftime('%Y-%m-%d')
-    with open(filename, "a") as f:
-        f.write(text + "\n")
-    print(text)
 
 while True:
     if is_first_iteration:
         is_first_iteration = False
     else:
-        time.sleep(60)
+        time.sleep(update_interval)
 
     log(f"------------------------------\n{get_timestamp()}\n------------------------------")
 
@@ -91,9 +81,6 @@ while True:
     current_currency_data, top_currency_data = market_observer.update()
 
     print_candidates(market_observer.candidates)
-
-    # pprint.pprint(current_currency_data)
-    # pprint.pprint(top_currency_data)
 
     if current_currency_symbol is None:
         log(f"No coin in portfolio yet...")
@@ -105,11 +92,10 @@ while True:
 
         # If no crypto in portfolio and no candidates, do nothing.
         else:
-            print("...and no candidates. Nothing to do.")
+            log("...and no candidates. Nothing to do.")
             continue
 
     else:
-
         # If current coin gets surpassed by more than min_diff_for_swap %, swap.
         if (
             top_currency_data is not None
@@ -120,7 +106,7 @@ while True:
             swap_currencies(current_currency_symbol, top_currency_data["symbol"])
             continue
 
-        
+        # If current coin is falling, get rid of it.
         elif current_currency_data["change_1h"] <= 0:
             log(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
             if top_currency_data is not None:
