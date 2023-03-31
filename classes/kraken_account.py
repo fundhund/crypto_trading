@@ -4,6 +4,7 @@ import urllib.parse
 import hashlib
 import hmac
 import base64
+from classes.log_helper import log
 
 with open("keys/kraken.txt", "r") as f:
     lines = f.read().splitlines()
@@ -12,20 +13,43 @@ with open("keys/kraken.txt", "r") as f:
 
 base_url = "https://api.kraken.com"
 
-def get_kraken_signature(urlpath, data, secret):
+def get_kraken_signature(urlpath, data):
     postdata = urllib.parse.urlencode(data)
     encoded = (str(data['nonce']) + postdata).encode()
     message = urlpath.encode() + hashlib.sha256(encoded).digest()
 
-    mac = hmac.new(base64.b64decode(secret), message, hashlib.sha512)
+    mac = hmac.new(base64.b64decode(api_sec), message, hashlib.sha512)
     sigdigest = base64.b64encode(mac.digest())
     return sigdigest.decode()
 
 
-def kraken_request(url_path, data, api_key, api_sec):
-    headers = {"API-Key": api_key, "API-Sign": get_kraken_signature(url_path, data, api_sec)}
+def kraken_request(url_path, data):
+    headers = {"API-Key": api_key, "API-Sign": get_kraken_signature(url_path, data)}
     response = requests.post((base_url + url_path), headers=headers, data=data)
     return response
+
+
+def handle_request(url_path, data):
+    response = kraken_request(url_path, data)
+    
+    if not response.ok:
+        log(f"ERROR: Request failed with status code {response.status_code}")
+        return None
+    
+    response_json = response.json()
+    
+    if response_json["error"]:
+        log(f"ERROR: {response_json['error']}")
+        return None
+
+    result = response_json["result"]
+    log(f"SUCCESS: {result}")
+    return result
+
+
+def get_nonce():
+    return str(int(1000000 * time.time()))
+
 
 to_kraken_symbols = {
     "btc": "xbt",
@@ -33,33 +57,43 @@ to_kraken_symbols = {
 
 from_kraken_symbols = {v: k for k, v in to_kraken_symbols.items()}
 
+
 def to_kraken_symbol(symbol):
     return to_kraken_symbols.get(symbol, symbol).upper()
 
+
 def from_kraken_symbol(symbol):
     return from_kraken_symbols.get(symbol.lower(), symbol)
+
 
 class KrakenAccount:
     def __init__(self):
         pass
 
+
     def get_eur_balance(self):
-        try:
+            nonce = get_nonce()
+            print(nonce)
             url_path = "/0/private/Balance"
-            data = {"nonce": str(int(1000 * time.time()))}
-            response = kraken_request(url_path, data, api_key, api_sec)
-            response_json = response.json()
-            if not response.ok or response_json["error"]:
-                return None
-            else:
-                eur_balance = response_json["result"]["ZEUR"]
-                return float(eur_balance)
-        except:
-            return None
+            data = {"nonce": nonce}
+            result = handle_request(url_path, data)
+            eur_balance = float(result["ZEUR"])
+            return eur_balance
+
 
     # todo
     def buy(self, currency_symbol, amount_in_eur):
+        pair = f"{to_kraken_symbol(currency_symbol)}EUR"
+        payload = {
+            "nonce": str(int(1000000 * time.time())),
+            "pair": pair,
+            "type": "buy",
+            "ordertype": "market",
+            "oflags": "viqc",
+            "volume": "10",
+        }
         pass
+
 
     # todo
     def sell_all(self, currency_symbol):

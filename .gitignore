@@ -2,7 +2,7 @@
 playground/
 
 # API keys
-keys
+keys/
 
 *.pyc
 logs/

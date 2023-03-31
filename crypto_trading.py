@@ -1,151 +1,127 @@
-import requests
+from classes.market_observer_coinmarketcap import MarketObserver
+from classes.kraken_account import KrakenAccount
+from classes.log_helper import log, get_timestamp
 import time
 from datetime import datetime
-import json
+import pprint
 
-with open('kraken_currencies.json') as f:
-    available_on_kraken = json.load(f)
 
-relevant_keys = [
-    "name",
-    "symbol",
-    "current_price",
-    "price_change_percentage_1h_in_currency",
-    "price_change_percentage_24h_in_currency",
-    "price_change_percentage_7d_in_currency",
-]
+last_purchase_time = None
+is_first_iteration = True
+estimated_fee_share = 0.005
+update_interval = 600
+swap_cooldown = 1800
+min_diff_for_swap = 1 # Increase to  2?
 
-current_currency = None
-# to do: save 1h change if currency remains trhe same.
+market_observer = MarketObserver()
+kraken_account = KrakenAccount()
 
-def get_api_url(page):
-    api_url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&order=market_cap_desc&per_page=250&page={page}&sparkline=false&price_change_percentage=1h%2C24h%2C7d&randInt={str(int(time.time()*1000))}"
-    return api_url
 
-def filter_keys(currency):
-    new_dict = {}
-    try:
-        new_dict = {key: currency[key] for key in relevant_keys}
-    except:
-        print("Error: ", currency)
-    return new_dict
+def print_candidates(candidates):
+    print("\nCANDIDATES\n")
 
-def is_candidate(currency):
-    change_1h = currency["price_change_percentage_1h_in_currency"]
-    change_24h = currency["price_change_percentage_24h_in_currency"]
-    change_7d = currency["price_change_percentage_7d_in_currency"]
-
-    if change_1h is None or change_24h is None or change_7d is None:
-        return False
-    
-    is_available_on_kraken = currency["symbol"].upper() in available_on_kraken
-    return change_1h > 0 and change_24h >= change_1h and change_7d >= change_24h and is_available_on_kraken
-
-def get_best_available_currency():
-    response1 = requests.get(get_api_url(1), headers={"Cache-Control": "no-cache"})
-    print(response1)
-    print(response1.ok)
-    print(response1.status_code)
-    response1 = response1.json()
-    response2 = requests.get(get_api_url(2), headers={"Cache-Control": "no-cache"}).json()
-    response3 = requests.get(get_api_url(3), headers={"Cache-Control": "no-cache"}).json()
-    response4 = requests.get(get_api_url(4), headers={"Cache-Control": "no-cache"}).json()
-
-    response = []
-    if isinstance(response1, list):
-        response += response1
-    if isinstance(response2, list):
-        response += response2
-    if isinstance(response3, list):
-        response += response3
-    if isinstance(response4, list):
-        response += response4
-
-    sorted_currencies = list(filter(is_candidate, map(filter_keys, response)))
-    sorted_currencies.sort(key=lambda x:x["price_change_percentage_1h_in_currency"] if x["price_change_percentage_1h_in_currency"] else 0, reverse=True)
-    if len(sorted_currencies) > 0:
-        return sorted_currencies[0]
+    if not candidates:
+        print("No candidates.")
     else:
-        return None
-    
-def get_candidates(per_page=250, pages=4):
-    candidates = []
-    for page in range(1, pages + 1):
-        api_url = f"https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&order=market_cap_desc&per_page={per_page}&page={page}&sparkline=false&price_change_percentage=1h%2C24h%2C7d&randInt={str(int(time.time()*1000))}"
-        response = requests.get(api_url, headers={"Cache-Control": "no-cache"})
-        print(response)
-        if not response.ok:
-            continue
-        response_json = response.json()
-        if isinstance(response_json, list):
-            candidates += list(filter(is_candidate, map(filter_keys, response_json)))
-    candidates.sort(key=lambda x:x["price_change_percentage_1h_in_currency"] if x["price_change_percentage_1h_in_currency"] else 0, reverse=True)
-    return candidates
+        max_len_names = max(map(lambda x:len(x["name"]), candidates))
+        max_len_symbols = max(map(lambda x:len(x["symbol"]), candidates))
+        for count, candidate in enumerate(candidates):
+            pos = (str(count + 1) + '.').rjust(3)
+            name = candidate['name'].ljust(max_len_names)
+            symbol = candidate['symbol'].upper().ljust(max_len_symbols)
+            c_1h = str(round(candidate['change_1h'], 2)).rjust(4)
+            c_24h = str(round(candidate['change_24h'], 2)).rjust(4)
+            c_7d = str(round(candidate['change_7d'], 2)).rjust(4)
+            print(pos, name, symbol, c_1h, c_24h, c_7d)
+    print("\n")
 
 
-candidate_trends = {}
+def buy(currency_symbol, share_of_balance=1):
+    global last_purchase_time
+    eur_balance = kraken_account.get_eur_balance()
+    if eur_balance is not None and eur_balance > 0:
+        available_funds = round(eur_balance * share_of_balance * (1 - estimated_fee_share), 2)
+        log(f"Buying {currency_symbol.upper()} for {str(available_funds)} EUR...")
+        kraken_account.buy(currency_symbol, available_funds)
+        market_observer.update_current_currency(top_currency_data)
+        last_purchase_time = datetime.now()
 
 
-def update_candidate_trends(new_candidates = []):
-    global candidate_trends
-    for candidate in new_candidates:
-        candidate_symbol = candidate["symbol"]
-        if candidate_symbol in candidate_trends:
-            candidate_trends[candidate_symbol].append(candidate["current_price"])
-        else:
-            candidate_trends[candidate_symbol] = [candidate["current_price"]]
-    
-    old_candidates_to_delete = []
-    
-    for candidate_symbol in candidate_trends:
-        if candidate_symbol not in map(lambda x:x["symbol"], new_candidates):
-            old_candidates_to_delete.append(candidate_symbol)
-
-    for candidate_symbol in old_candidates_to_delete:
-        candidate_trends.pop(candidate_symbol)
+def sell_all(currency_symbol):
+    log(f"Selling all {currency_symbol.upper()} for EUR...")
+    kraken_account.sell_all(currency_symbol)
+    if market_observer.current_currency["symbol"] == currency_symbol:
+        market_observer.update_current_currency({
+            "symbol": None,
+            "purchase_price": None,
+        })
 
 
-def print_candidates_trends():
-    for currency, trend in candidate_trends.items():
-        print(currency, trend, is_sus(currency))
-    print("---")
+def swap_currencies(old, new):
+    log(f"Swapping {old.upper()} for {new.upper()}...")
+    buy(new)
+    sell_all(old)
 
-def is_sus(currency):
-    if not currency in candidate_trends:
+
+def is_swap_cooldown_over():
+    if last_purchase_time is None:
         return True
-    
-    trend = candidate_trends[currency]
-
-    if len(trend) >= 15 and trend[14] < trend[0]:
-        return True
-    
-    for i in range(1, len(trend)):
-        if trend[i] <= (trend[i - 1] * 0.99):
-            return True
-        
-    return False
+    return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
 
 
 while True:
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%H:%M:%S")
-    best_currency = get_best_available_currency()
-    if best_currency == None:
-        print("no currency available")
-    else:
-        print(formatted_time, best_currency["name"], best_currency["price_change_percentage_1h_in_currency"], best_currency["price_change_percentage_24h_in_currency"], best_currency["price_change_percentage_7d_in_currency"])
-    print('---')
-    time.sleep(60)
+    # if is_first_iteration:
+    #     is_first_iteration = False
+    # else:
+    #     time.sleep(update_interval)
 
-# print(requests.get(get_api_url(1), headers={"Cache-Control": "no-cache"}).ok)
-# print(list(range(1, 5)))
+    # log(f"------------------------------\n{get_timestamp()}\n------------------------------")
 
-# while True: 
-#     current_time = datetime.now()
-#     formatted_time = current_time.strftime("%H:%M:%S")
-#     print(formatted_time)
-#     candidates = get_candidates(pages=1, per_page=100)
-#     update_candidate_trends(candidates)
-#     print_candidates_trends()
-#     time.sleep(60)
+    # current_currency_symbol = market_observer.current_currency["symbol"]
+    # current_currency_data, top_currency_data = market_observer.update()
 
+    # print_candidates(market_observer.candidates)
+
+    # if current_currency_symbol is None:
+    #     log(f"No coin in portfolio yet...")
+
+    #     # If no crypto in prtfoio, use 50 % of EUR balance (minus estimated transaction fee) to buy best coin.
+    #     if top_currency_data is not None:
+    #         buy(top_currency_data["symbol"], 0.5)
+    #         continue
+
+    #     # If no crypto in portfolio and no candidates, do nothing.
+    #     else:
+    #         log("...and no candidates. Nothing to do.")
+    #         continue
+
+    # else:
+    #     # If current coin gets surpassed by more than min_diff_for_swap %, swap.
+    #     if (
+    #         top_currency_data is not None
+    #         and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
+    #         and is_swap_cooldown_over()
+    #     ):
+    #         log(f"{current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %).")
+    #         swap_currencies(current_currency_symbol, top_currency_data["symbol"])
+    #         continue
+
+    #     # If current coin is falling, get rid of it.
+    #     elif current_currency_data["change_1h"] <= 0:
+    #         log(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
+    #         last_purchase_time = datetime.now()
+    #         if top_currency_data is not None:
+    #             log(f"{top_currency_data['symbol'].upper()} looks better.")
+    #             swap_currencies(current_currency_data, top_currency_data["symbol"])
+    #             continue
+    #         else:
+    #             log("Nothing else to buy right now...")
+    #             sell_all(current_currency_symbol)
+    #             continue
+
+    #     else:
+    #         log(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
+    #         continue
+
+    eur = kraken_account.get_eur_balance()
+    print(eur)
