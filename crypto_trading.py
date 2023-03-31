@@ -69,7 +69,7 @@ def is_swap_cooldown_over():
     return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
 
 
-while True:
+# while True:
     # if is_first_iteration:
     #     is_first_iteration = False
     # else:
@@ -123,5 +123,8 @@ while True:
     #         log(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
     #         continue
 
-    eur = kraken_account.get_eur_balance()
-    print(eur)
+eur = kraken_account.get_eur_balance()
+print(eur)
+
+eur = kraken_account.get_portfolio_value()
+print(eur)

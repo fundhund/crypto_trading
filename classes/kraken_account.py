@@ -72,13 +72,24 @@ class KrakenAccount:
 
 
     def get_eur_balance(self):
-            nonce = get_nonce()
-            print(nonce)
-            url_path = "/0/private/Balance"
-            data = {"nonce": nonce}
-            result = handle_request(url_path, data)
-            eur_balance = float(result["ZEUR"])
-            return eur_balance
+        url_path = "/0/private/Balance"
+        data = {"nonce": get_nonce()}
+        
+        result = handle_request(url_path, data)
+        eur_balance = round(float(result["ZEUR"]), 2)
+        return eur_balance
+    
+
+    def get_portfolio_value(self):
+        url_path = "/0/private/TradeBalance"
+        data = {
+            "nonce": get_nonce(),
+            "asset": "ZEUR",
+        }
+        
+        result = handle_request(url_path, data)
+        eur_balance = round(float(result["eb"]), 2)
+        return eur_balance
 
 
     # todo

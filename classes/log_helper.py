@@ -7,7 +7,7 @@ def get_timestamp():
 
 
 def log(text):
-    filename = "logs/" + datetime.today().strftime('%Y-%m-%d')
+    filename = f"logs/{datetime.today().strftime('%Y-%m-%d')}.txt"
     with open(filename, "a") as f:
         f.write(text + "\n")
     print(text)
