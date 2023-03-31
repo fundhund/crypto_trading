@@ -58,17 +58,25 @@ to_kraken_symbols = {
 from_kraken_symbols = {v: k for k, v in to_kraken_symbols.items()}
 
 
-def to_kraken_symbol(symbol):
-    return to_kraken_symbols.get(symbol, symbol).upper()
-
-
-def from_kraken_symbol(symbol):
-    return from_kraken_symbols.get(symbol.lower(), symbol)
-
-
 class KrakenAccount:
     def __init__(self):
         pass
+
+
+    def to_kraken_symbol(self, symbol):
+        return to_kraken_symbols.get(symbol, symbol).upper()
+
+
+    def from_kraken_symbol(self, symbol):
+        return from_kraken_symbols.get(symbol.lower(), symbol)
+
+
+    def get_portfolio(self):
+        url_path = "/0/private/Balance"
+        data = {"nonce": get_nonce()}
+        
+        result = handle_request(url_path, data)
+        return result
 
 
     def get_eur_balance(self):
@@ -78,7 +86,7 @@ class KrakenAccount:
         result = handle_request(url_path, data)
         eur_balance = round(float(result["ZEUR"]), 2)
         return eur_balance
-    
+
 
     def get_portfolio_value(self):
         url_path = "/0/private/TradeBalance"
@@ -94,18 +102,29 @@ class KrakenAccount:
 
     # todo
     def buy(self, currency_symbol, amount_in_eur):
-        pair = f"{to_kraken_symbol(currency_symbol)}EUR"
-        payload = {
-            "nonce": str(int(1000000 * time.time())),
-            "pair": pair,
+        url_path = "/0/private/AddOrder"
+        data = {
+            "nonce": get_nonce(),
+            "pair": f"{self.to_kraken_symbol(currency_symbol)}EUR",
             "type": "buy",
             "ordertype": "market",
             "oflags": "viqc",
-            "volume": "10",
+            "volume": amount_in_eur,
         }
-        pass
+        result = handle_request(url_path, data)
+        return result
 
 
     # todo
-    def sell_all(self, currency_symbol):
-        pass
+    def sell(self, currency_symbol, volume):
+        url_path = "/0/private/AddOrder"
+        data = {
+            "nonce": get_nonce(),
+            "pair": f"EUR{self.to_kraken_symbol(currency_symbol)}",
+            "type": "buy",
+            "ordertype": "market",
+            "oflags": "viqc",
+            "volume": volume,
+        }
+        result = handle_request(url_path, data)
+        return result

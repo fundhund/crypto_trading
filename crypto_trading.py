@@ -41,15 +41,25 @@ def buy(currency_symbol, share_of_balance=1):
     eur_balance = kraken_account.get_eur_balance()
     if eur_balance is not None and eur_balance > 0:
         available_funds = round(eur_balance * share_of_balance * (1 - estimated_fee_share), 2)
-        log(f"Buying {currency_symbol.upper()} for {str(available_funds)} EUR...")
         kraken_account.buy(currency_symbol, available_funds)
-        market_observer.update_current_currency(top_currency_data)
+        market_observer.current_currency = currency_symbol
         last_purchase_time = datetime.now()
 
 
+def get_currency_volume(currency_symbol):
+    portfolio = kraken_account.get_portfolio()
+    
+    if portfolio is None:
+        return None
+    
+    kraken_symbol = kraken_account.to_kraken_symbol(currency_symbol)
+    volume = portfolio[f"X{kraken_symbol}"]
+    return volume
+
+
 def sell_all(currency_symbol):
-    log(f"Selling all {currency_symbol.upper()} for EUR...")
-    kraken_account.sell_all(currency_symbol)
+    volume = get_currency_volume(currency_symbol)
+    kraken_account.sell(currency_symbol, volume)
     if market_observer.current_currency["symbol"] == currency_symbol:
         market_observer.update_current_currency({
             "symbol": None,
@@ -116,15 +126,11 @@ def is_swap_cooldown_over():
     #             continue
     #         else:
     #             log("Nothing else to buy right now...")
-    #             sell_all(current_currency_symbol)
+    #             sell(current_currency_symbol)
     #             continue
 
     #     else:
     #         log(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
     #         continue
 
-eur = kraken_account.get_eur_balance()
-print(eur)
-
-eur = kraken_account.get_portfolio_value()
-print(eur)
+# TODO: more logging for sell and buy

@@ -44,10 +44,7 @@ class MarketObserver:
     def __init__(self):
         self._candidates = []
         self._price_trends = {}
-        self._current_currency = {
-            "symbol": None,
-            "purchase_price": None,
-        }
+        self._current_currency = None
 
 
     @property
@@ -59,12 +56,6 @@ class MarketObserver:
     @current_currency.setter
     def current_currency(self, value):
         self._current_currency = value
-
-    def update_current_currency(self, currency_data):
-        self.current_currency = {
-            "symbol": currency_data["symbol"],
-            "purchase_price": currency_data["price"],
-        }
 
 
     @property
@@ -90,7 +81,7 @@ class MarketObserver:
 
 
     def is_candidate(self, currency_data):
-        if currency_data["symbol"] == self.current_currency["symbol"]:
+        if currency_data["symbol"] == self.current_currency:
             return True
     
         change_1h = currency_data["change_1h"]
@@ -161,7 +152,7 @@ class MarketObserver:
             new_candidates = list(filter(self.is_candidate, map(filter_keys, response_json)))
             response.close()
         
-        current_currency_data = next((currency_data for currency_data in new_candidates if currency_data["symbol"] == self.current_currency["symbol"]), None)
+        current_currency_data = next((currency_data for currency_data in new_candidates if currency_data["symbol"] == self.current_currency), None)
         
         self.update_price_trends(new_candidates)
         pprint.pprint(self.price_trends)
