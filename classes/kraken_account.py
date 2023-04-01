@@ -100,7 +100,6 @@ class KrakenAccount:
         return eur_balance
 
 
-    # todo
     def buy(self, currency_symbol, amount_in_eur):
         url_path = "/0/private/AddOrder"
         data = {
@@ -111,20 +110,20 @@ class KrakenAccount:
             "oflags": "viqc",
             "volume": amount_in_eur,
         }
+
         result = handle_request(url_path, data)
         return result
 
 
-    # todo
     def sell(self, currency_symbol, volume):
         url_path = "/0/private/AddOrder"
         data = {
             "nonce": get_nonce(),
-            "pair": f"EUR{self.to_kraken_symbol(currency_symbol)}",
-            "type": "buy",
+            "pair": f"{self.to_kraken_symbol(currency_symbol)}EUR",
+            "type": "sell",
             "ordertype": "market",
-            "oflags": "viqc",
             "volume": volume,
         }
+
         result = handle_request(url_path, data)
         return result

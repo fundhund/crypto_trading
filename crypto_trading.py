@@ -3,7 +3,7 @@ from classes.kraken_account import KrakenAccount
 from classes.log_helper import log, get_timestamp
 import time
 from datetime import datetime
-import pprint
+# import pprint
 
 
 last_purchase_time = None
@@ -37,6 +37,7 @@ def print_candidates(candidates):
 
 
 def buy(currency_symbol, share_of_balance=1):
+    log(f"ACTION: Buying {currency_symbol.upper()} using {str(share_of_balance * 100)} % of available funds")
     global last_purchase_time
     eur_balance = kraken_account.get_eur_balance()
     if eur_balance is not None and eur_balance > 0:
@@ -58,6 +59,7 @@ def get_currency_volume(currency_symbol):
 
 
 def sell_all(currency_symbol):
+    log(f"ACTION: Selling {currency_symbol.upper()}")
     volume = get_currency_volume(currency_symbol)
     kraken_account.sell(currency_symbol, volume)
     if market_observer.current_currency["symbol"] == currency_symbol:
@@ -79,58 +81,59 @@ def is_swap_cooldown_over():
     return (datetime.now() - last_purchase_time).total_seconds() >= swap_cooldown
 
 
-# while True:
-    # if is_first_iteration:
-    #     is_first_iteration = False
-    # else:
-    #     time.sleep(update_interval)
+while True:
+    if is_first_iteration:
+        is_first_iteration = False
+        log("\n")
+    else:
+        time.sleep(update_interval)
 
-    # log(f"------------------------------\n{get_timestamp()}\n------------------------------")
+    log(f"{get_timestamp()}\n")
 
-    # current_currency_symbol = market_observer.current_currency["symbol"]
-    # current_currency_data, top_currency_data = market_observer.update()
+    kraken_account.get_portfolio()
+    kraken_account.get_portfolio_value()
 
-    # print_candidates(market_observer.candidates)
+    current_currency_symbol = market_observer.current_currency["symbol"]
+    current_currency_data, top_currency_data = market_observer.update()
 
-    # if current_currency_symbol is None:
-    #     log(f"No coin in portfolio yet...")
+    print_candidates(market_observer.candidates)
 
-    #     # If no crypto in prtfoio, use 50 % of EUR balance (minus estimated transaction fee) to buy best coin.
-    #     if top_currency_data is not None:
-    #         buy(top_currency_data["symbol"], 0.5)
-    #         continue
+    if current_currency_symbol is None:
+        log("EVENT: No coin in portfolio yet")
 
-    #     # If no crypto in portfolio and no candidates, do nothing.
-    #     else:
-    #         log("...and no candidates. Nothing to do.")
-    #         continue
+        # If no crypto in prtfoio, use 50 % of EUR balance (minus estimated transaction fee) to buy best coin.
+        if top_currency_data is not None:
+            buy(top_currency_data["symbol"], 0.5)
+            continue
 
-    # else:
-    #     # If current coin gets surpassed by more than min_diff_for_swap %, swap.
-    #     if (
-    #         top_currency_data is not None
-    #         and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
-    #         and is_swap_cooldown_over()
-    #     ):
-    #         log(f"{current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %).")
-    #         swap_currencies(current_currency_symbol, top_currency_data["symbol"])
-    #         continue
+        # If no crypto in portfolio and no candidates, do nothing.
+        else:
+            log("EVENT: No candidates")
+            continue
 
-    #     # If current coin is falling, get rid of it.
-    #     elif current_currency_data["change_1h"] <= 0:
-    #         log(f"{current_currency_symbol} is making losses ({current_currency_data['change_1h'] } %). Time to get rid of it...")
-    #         last_purchase_time = datetime.now()
-    #         if top_currency_data is not None:
-    #             log(f"{top_currency_data['symbol'].upper()} looks better.")
-    #             swap_currencies(current_currency_data, top_currency_data["symbol"])
-    #             continue
-    #         else:
-    #             log("Nothing else to buy right now...")
-    #             sell(current_currency_symbol)
-    #             continue
+    else:
+        # If current coin gets surpassed by more than min_diff_for_swap %, swap.
+        if (
+            top_currency_data is not None
+            and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
+            and is_swap_cooldown_over()
+        ):
+            log(f"EVENT {current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) significantly surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %)")
+            swap_currencies(current_currency_symbol, top_currency_data["symbol"])
+            continue
 
-    #     else:
-    #         log(f"All good. {current_currency_symbol.upper()} still strong at {current_currency_data['change_1h']} %.")
-    #         continue
+        # If current coin is falling, get rid of it.
+        elif current_currency_data["change_1h"] <= 0:
+            log(f"EVENT: {current_currency_symbol} is making losses in the last hour ({current_currency_data['change_1h'] } %)")
+            last_purchase_time = datetime.now()
+            if top_currency_data is not None:
+                swap_currencies(current_currency_data, top_currency_data["symbol"])
+                continue
+            else:
+                log("EVENT: No candidates")
+                sell_all(current_currency_symbol)
+                continue
 
-# TODO: more logging for sell and buy
+        else:
+            log(f"EVENT: Keeping {current_currency_symbol.upper()} at {current_currency_data['change_1h']} %")
+            continue
