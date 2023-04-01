@@ -84,8 +84,8 @@ def is_swap_cooldown_over():
 while True:
     if is_first_iteration:
         is_first_iteration = False
-        log("\n")
     else:
+        log("\n")
         time.sleep(update_interval)
 
     log(f"{get_timestamp()}\n")
@@ -93,7 +93,7 @@ while True:
     kraken_account.get_portfolio()
     kraken_account.get_portfolio_value()
 
-    current_currency_symbol = market_observer.current_currency["symbol"]
+    current_currency_symbol = market_observer.current_currency
     current_currency_data, top_currency_data = market_observer.update()
 
     print_candidates(market_observer.candidates)
