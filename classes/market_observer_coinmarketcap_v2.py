@@ -102,12 +102,13 @@ class MarketObserver:
             return True
     
         change_10m = currency_data["change_10m"]
-        change_1h = currency_data["change_1h"]
+        change_20m = currency_data["change_20m"]
+        change_30m = currency_data["change_30m"]
 
-        if change_10m is None or change_1h is None: 
+        if change_10m is None or change_20m is None or change_30m is None: 
             return False
 
-        return change_10m > 0 and change_1h > 0
+        return change_10m > 0.3 and change_20m > change_10m and change_30m > change_20m
 
 
     def is_currently_stable(self, currency_data):
