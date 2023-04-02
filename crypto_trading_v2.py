@@ -3,17 +3,18 @@ from classes.kraken_account import KrakenAccount
 from classes.log_helper import log, get_timestamp
 import time
 from datetime import datetime
-# import pprint
+import sys
 
+args = sys.argv
 
 last_purchase_time = None
 is_first_iteration = True
 estimated_fee_share = 0.005
 update_interval = 600
 swap_cooldown = 1800
-min_diff_for_swap = 1 # Increase to  2?
+min_diff_for_swap = 1
 
-market_observer = MarketObserver()
+market_observer = MarketObserver(args[1]) if len(args) > 1 else MarketObserver()
 kraken_account = KrakenAccount()
 
 
@@ -124,10 +125,12 @@ while True:
             continue
 
         # If current coin is falling, get rid of it.
-        elif (current_currency_data["change_10m"] is not None and current_currency_data["change_10m"] < -0.5
-            or current_currency_data["change_20m"] is not None and current_currency_data["change_20m"] < -0.25
-            or current_currency_data["change_30m"] is not None and current_currency_data["change_20m"] < 0
-        ):
+        elif (current_currency_data["change_10m"] is not None 
+            and current_currency_data["change_10m"] < 0
+            and (current_currency_data["change_10m"] < -0.5
+                or current_currency_data["change_20m"] is not None and current_currency_data["change_20m"] < -0.25
+                or current_currency_data["change_30m"] is not None and current_currency_data["change_30m"] < 0
+        )):
             log(f"EVENT: {current_currency_symbol} is making losses")
             last_purchase_time = None
             if top_currency_data is not None and current_currency_data["symbol"] != top_currency_data["symbol"]:

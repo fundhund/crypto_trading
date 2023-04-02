@@ -42,10 +42,10 @@ def filter_keys(currency_data):
 
 
 class MarketObserver:
-    def __init__(self):
+    def __init__(self, current_currency=None):
         self._candidates = []
         self._prices = {key: [] for key in available_on_kraken}
-        self._current_currency = None
+        self._current_currency = current_currency
         self._market_data = []
 
 
