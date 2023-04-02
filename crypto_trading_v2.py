@@ -96,7 +96,7 @@ while True:
 
     current_currency_symbol = market_observer.current_currency
     current_currency_data, top_currency_data = market_observer.update()
-    
+
     print_candidates()
 
     if current_currency_symbol is None:
@@ -116,10 +116,10 @@ while True:
         # If current coin gets surpassed by more than min_diff_for_swap %, swap.
         if (
             top_currency_data is not None
-            and ((top_currency_data["change_1h"] - current_currency_data["change_1h"]) > min_diff_for_swap)
+            and ((top_currency_data["change_10m"] - current_currency_data["change_10m"]) > min_diff_for_swap)
             and is_swap_cooldown_over()
         ):
-            log(f"EVENT {current_currency_symbol.upper()} ({current_currency_data['change_1h']} %) significantly surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_1h']} %)")
+            log(f"EVENT {current_currency_symbol.upper()} ({current_currency_data['change_10m']} %) significantly surpassed by {top_currency_data['symbol'].upper()} ({top_currency_data['change_10m']} %)")
             swap_currencies(current_currency_symbol, top_currency_data["symbol"])
             continue
 
@@ -128,7 +128,7 @@ while True:
             or current_currency_data["change_20m"] is not None and current_currency_data["change_20m"] < -0.25
             or current_currency_data["change_30m"] is not None and current_currency_data["change_20m"] < 0
         ):
-            log(f"EVENT: {current_currency_symbol} is making losses in the last hour ({current_currency_data['change_1h'] } %)")
+            log(f"EVENT: {current_currency_symbol} is making losses")
             last_purchase_time = None
             if top_currency_data is not None:
                 swap_currencies(current_currency_data["symbol"], top_currency_data["symbol"])
@@ -139,5 +139,5 @@ while True:
                 continue
 
         else:
-            log(f"ACTION: Keeping {current_currency_symbol.upper()} at {current_currency_data['change_1h']} %")
+            log(f"ACTION: Keeping {current_currency_symbol.upper()} at {current_currency_data['change_10m']} %")
             continue
