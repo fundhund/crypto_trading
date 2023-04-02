@@ -53,6 +53,7 @@ def get_nonce():
 
 to_kraken_symbols = {
     "btc": "xbt",
+    "doge": "xdg",
 }
 
 from_kraken_symbols = {v: k for k, v in to_kraken_symbols.items()}
@@ -84,6 +85,8 @@ class KrakenAccount:
         data = {"nonce": get_nonce()}
         
         result = handle_request(url_path, data)
+        if result is None:
+            return None
         eur_balance = round(float(result["ZEUR"]), 2)
         return eur_balance
 
@@ -96,6 +99,8 @@ class KrakenAccount:
         }
         
         result = handle_request(url_path, data)
+        if result is None:
+            return None
         eur_balance = round(float(result["eb"]), 2)
         return eur_balance
 

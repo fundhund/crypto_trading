@@ -54,19 +54,20 @@ def get_currency_volume(currency_symbol):
         return None
     
     kraken_symbol = kraken_account.to_kraken_symbol(currency_symbol)
-    volume = portfolio[f"X{kraken_symbol}"]
-    return volume
+    if kraken_symbol in portfolio:
+        return portfolio[f"{kraken_symbol}"]
+    elif f"X{kraken_symbol}" in portfolio:
+        return portfolio[f"X{kraken_symbol}"]
+    else:
+        return 0
 
 
 def sell_all(currency_symbol):
     log(f"ACTION: Selling {currency_symbol.upper()}")
     volume = get_currency_volume(currency_symbol)
     kraken_account.sell(currency_symbol, volume)
-    if market_observer.current_currency["symbol"] == currency_symbol:
-        market_observer.update_current_currency({
-            "symbol": None,
-            "purchase_price": None,
-        })
+    if market_observer.current_currency == currency_symbol:
+        market_observer.current_currency = None
 
 
 def swap_currencies(old, new):
@@ -127,7 +128,7 @@ while True:
             log(f"EVENT: {current_currency_symbol} is making losses in the last hour ({current_currency_data['change_1h'] } %)")
             last_purchase_time = None
             if top_currency_data is not None:
-                swap_currencies(current_currency_data, top_currency_data["symbol"])
+                swap_currencies(current_currency_data["symbol"], top_currency_data["symbol"])
                 continue
             else:
                 log("EVENT: No candidates")
@@ -135,5 +136,5 @@ while True:
                 continue
 
         else:
-            log(f"EVENT: Keeping {current_currency_symbol.upper()} at {current_currency_data['change_1h']} %")
+            log(f"ACTION: Keeping {current_currency_symbol.upper()} at {current_currency_data['change_1h']} %")
             continue
