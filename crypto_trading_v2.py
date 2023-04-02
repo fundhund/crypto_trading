@@ -93,11 +93,11 @@ while True:
         time.sleep(update_interval)
 
     log(f"{get_timestamp()}\n")
-    
-    print_candidates()
 
     current_currency_symbol = market_observer.current_currency
     current_currency_data, top_currency_data = market_observer.update()
+    
+    print_candidates()
 
     if current_currency_symbol is None:
         log("EVENT: No coin in portfolio yet")
