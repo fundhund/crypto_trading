@@ -34,14 +34,17 @@ def handle_request(url_path, data):
     
     if not response.ok:
         log(f"ERROR: Request failed with status code {response.status_code}")
+        response.close()
         return None
     
     response_json = response.json()
     
     if response_json["error"]:
         log(f"ERROR: {response_json['error']}")
+        response.close()
         return None
 
+    response.close()
     result = response_json["result"]
     log(f"SUCCESS: {result}")
     return result
