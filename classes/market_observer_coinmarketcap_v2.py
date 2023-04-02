@@ -111,18 +111,6 @@ class MarketObserver:
         return change_10m > 0.3 and change_20m > change_10m and change_30m > change_20m
 
 
-    def is_currently_stable(self, currency_data):
-        currency_symbol = currency_data["symbol"]
-
-        if not currency_symbol in self.prices:
-            return False
-        
-        if currency_data.get("change_10m", 0) <= 0 and currency_data.get("change_1h", 0) <= 0:
-            return False
-        
-        return True
-
-
     def is_in_candidates(self, currency_symbol):
         return currency_symbol in list(map(lambda x:x["symbol"], self.candidates))
 

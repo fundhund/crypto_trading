@@ -130,7 +130,7 @@ while True:
         ):
             log(f"EVENT: {current_currency_symbol} is making losses")
             last_purchase_time = None
-            if top_currency_data is not None:
+            if top_currency_data is not None and current_currency_data["symbol"] != top_currency_data["symbol"]:
                 swap_currencies(current_currency_data["symbol"], top_currency_data["symbol"])
                 continue
             else:
