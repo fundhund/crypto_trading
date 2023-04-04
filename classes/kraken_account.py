@@ -68,7 +68,7 @@ class KrakenAccount:
 
 
     def to_kraken_symbol(self, symbol):
-        return to_kraken_symbols.get(symbol, symbol).upper()
+        return to_kraken_symbols.get(symbol.lower(), symbol).upper()
 
 
     def from_kraken_symbol(self, symbol):
@@ -132,6 +132,6 @@ class KrakenAccount:
             "ordertype": "market",
             "volume": volume,
         }
-
+        print(data)
         result = handle_request(url_path, data)
         return result

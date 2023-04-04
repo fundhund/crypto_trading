@@ -57,7 +57,7 @@ def get_currency_volume(currency_symbol):
     if portfolio is None:
         return None
     
-    kraken_symbol = kraken_account.to_kraken_symbol(currency_symbol)
+    kraken_symbol = kraken_account.to_kraken_symbol(currency_symbol.lower())
     if kraken_symbol in portfolio:
         return portfolio[f"{kraken_symbol}"]
     elif f"X{kraken_symbol}" in portfolio:
@@ -69,6 +69,7 @@ def get_currency_volume(currency_symbol):
 def sell_all(currency_symbol):
     log(f"ACTION: Selling {currency_symbol.upper()}")
     volume = get_currency_volume(currency_symbol)
+    print(volume)
     kraken_account.sell(currency_symbol, volume)
     if market_observer.current_currency == currency_symbol:
         market_observer.current_currency = None
