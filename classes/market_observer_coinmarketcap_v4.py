@@ -104,7 +104,7 @@ class MarketObserver:
         if change_5m is None: 
             return False
 
-        return change_5m > 4
+        return change_5m > 5
 
 
     def is_in_candidates(self, currency_symbol):
