@@ -125,9 +125,8 @@ while True:
             continue
 
         # If current coin is falling, get rid of it.
-        elif (current_currency_data["change_5m"] is not None and current_currency_data["change_10m"] < -0.5
-            or current_currency_data["change_10m"] is not None and current_currency_data["change_10m"] < 0):
-            log(f"EVENT: {current_currency_symbol} is making losses ({current_currency_data['change_5m']} % in 5 min, {current_currency_data['change_10m']} % in 10 min)")
+        elif current_currency_data["change_5m"] is not None and current_currency_data["change_5m"] < -0:
+            log(f"EVENT: {current_currency_symbol} is making losses ({current_currency_data['change_5m']} % in 5 min)")
             last_purchase_time = None
             if top_currency_data is not None and current_currency_data["symbol"] != top_currency_data["symbol"]:
                 swap_currencies(current_currency_data["symbol"], top_currency_data["symbol"])
