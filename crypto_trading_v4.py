@@ -18,11 +18,11 @@ market_observer = MarketObserver(args[1]) if len(args) > 1 else MarketObserver()
 kraken_account = KrakenAccount()
 
 
-def print_candidates():
-    print("\nCANDIDATES\n")
+def get_candidates_table():
+    text = "\nCANDIDATES\n\n"
 
     if not market_observer.candidates:
-        print("No candidates.")
+        text += "No candidates.\n"
     else:
         max_len_names = max(map(lambda x:len(x["name"]), market_observer.candidates))
         max_len_symbols = max(map(lambda x:len(x["symbol"]), market_observer.candidates))
@@ -36,8 +36,8 @@ def print_candidates():
             c_1h = str(round(candidate['change_1h'], 2)).rjust(4)
             c_24h = str(round(candidate['change_24h'], 2)).rjust(4)
             c_7d = str(round(candidate['change_7d'], 2)).rjust(4)
-            print(pos, name, symbol, c_10m, c_20m, c_30m, c_1h, c_24h, c_7d)
-    print("\n")
+            text += f"{pos} {name} {symbol} {c_10m} {c_20m} {c_30m} {c_1h} {c_24h} {c_7d}\n"
+    return text
 
 
 def buy(currency_symbol, share_of_balance=1):
@@ -98,7 +98,11 @@ while True:
     current_currency_symbol = market_observer.current_currency
     current_currency_data, top_currency_data = market_observer.update()
 
-    print_candidates()
+    candidates_table = get_candidates_table()
+    if len(market_observer.candidates) > 0:
+        log(candidates_table)
+    else:
+        print(candidates_table)
 
     if current_currency_symbol is None:
         log("EVENT: No coin in portfolio yet")
